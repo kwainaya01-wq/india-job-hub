@@ -331,23 +331,35 @@
         });
     }
 
-    auth.onAuthStateChanged(user => { 
+        auth.onAuthStateChanged(user => { 
         if(user){ 
             document.getElementById('loginPage').style.display='none'; 
             document.getElementById('uPhone').innerText = "Mobile: " + user.phoneNumber;
             loadJobs();
-            // Update OneSignal ID on login
-            if(window.plugins && window
-               .plugins.OneSignal) {
-                 window.plugins.OneSignal.promptForPushNotificationsWithUserResponse((accepted) => {
-    console.log("User accepted notifications: " + accepted);
-});
-                window.plugins.OneSignal.getDeviceState((s) => {
-                    if(s.userId) db.ref('users/' + user.uid).update({ onesignalId: s.userId });
-                });
+
+            // Naya aur Strong Notification Logic
+            if(window.plugins && window.plugins.OneSignal) {
+                // 2 Second ke baad popup dikhao (Fix for Android 13+)
+                setTimeout(() => {
+                    window.plugins.OneSignal.promptForPushNotificationsWithUserResponse((accepted) => {
+                        console.log("Permission Status: " + accepted);
+                    });
+
+                    window.plugins.OneSignal.getDeviceState((s) => {
+                        if(s.userId) {
+                            db.ref('users/' + user.uid).update({ 
+                                onesignalId: s.userId,
+                                lastLogin: Date.now()
+                            });
+                        }
+                    });
+                }, 2000); 
             }
-        } else { document.getElementById('loginPage').style.display='flex'; } 
+        } else { 
+            document.getElementById('loginPage').style.display='flex'; 
+        } 
     });
+    
 </script>
 </body>
 </html>
