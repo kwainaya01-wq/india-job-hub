@@ -11,27 +11,33 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22  # Ab ye Capacitor ki nayi requirement ko pura karega
+          node-version: 22
 
-      - name: Install Dependencies
+      - name: Clean Install Dependencies
         run: |
-          npm install
-          npm install onesignal-cordova-plugin
-          npm install @capacitor/android@latest @capacitor/cli@latest @capacitor/core@latest
+          npm install --force
+          npm install onesignal-cordova-plugin --force
+          npm install @capacitor/android@latest @capacitor/cli@latest @capacitor/core@latest --force
 
       - name: Build Web
         run: |
           mkdir -p www
           cp index.html www/
 
-      - name: Sync Capacitor
+      - name: Sync & Repair Capacitor
         run: |
-          npx cap add android || true
+          # Agar android folder hai toh use delete karke naya banayenge taaki version conflict na ho
+          rm -rf android
+          npx cap add android
           npx cap sync android
 
-      - name: Fix MultiDex and SDK 34
+      - name: Final SDK and MultiDex Fix
         run: |
-          [ -f android/variables.gradle ] && sed -i 's/33/34/g' android/variables.gradle || true
+          # SDK 34 upgrade
+          sed -i 's/compileSdkVersion = 33/compileSdkVersion = 34/g' android/variables.gradle || true
+          sed -i 's/targetSdkVersion = 33/targetSdkVersion = 34/g' android/variables.gradle || true
+          
+          # MultiDex Enable
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle || true
           sed -i '/dependencies {/a \    implementation "androidx.multidex:multidex:2.0.1"' android/app/build.gradle || true
 
@@ -44,6 +50,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: IndiaJobHub-Final
+          name: IndiaJobHub-Final-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
