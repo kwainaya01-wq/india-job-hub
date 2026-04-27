@@ -11,7 +11,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22  # Ab ye Capacitor ki nayi requirement ko pura karega
 
       - name: Install Dependencies
         run: |
@@ -31,13 +31,8 @@ jobs:
 
       - name: Fix MultiDex and SDK 34
         run: |
-          # SDK Version update
           [ -f android/variables.gradle ] && sed -i 's/33/34/g' android/variables.gradle || true
-          
-          # MultiDex enable karna (Asli Fix yahi hai)
           sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle || true
-          
-          # Implementation add karna build.gradle mein
           sed -i '/dependencies {/a \    implementation "androidx.multidex:multidex:2.0.1"' android/app/build.gradle || true
 
       - name: Build APK
