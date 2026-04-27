@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Dependencies
         run: |
@@ -25,24 +25,27 @@ jobs:
           npm install onesignal-cordova-plugin --force
           npm install @capacitor/android@latest @capacitor/core@latest @capacitor/cli@latest --force
 
-      - name: Web Build
+      - name: Build Web
         run: |
           mkdir -p www
           cp index.html www/
 
       - name: Sync Capacitor
         run: |
+          # Pehle se maujood android folder ki purani settings clear karne ke liye
           npx cap sync android || (npx cap add android && npx cap sync android)
 
       - name: Fix SDK 34 & MultiDex
         run: |
-          # SDK 34 Force Upgrade
-          [ -f android/variables.gradle ] && sed -i 's/compileSdkVersion = 33/compileSdkVersion = 34/g' android/variables.gradle || true
-          [ -f android/variables.gradle ] && sed -i 's/targetSdkVersion = 33/targetSdkVersion = 34/g' android/variables.gradle || true
-          
-          # MultiDex Enable (Dexing error fix)
-          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle || true
-          sed -i '/dependencies {/a \    implementation "androidx.multidex:multidex:2.0.1"' android/app/build.gradle || true
+          # SDK 34 Force Upgrade taaki OneSignal sahi se chale
+          if [ -d "android" ]; then
+            [ -f android/variables.gradle ] && sed -i 's/compileSdkVersion = 33/compileSdkVersion = 34/g' android/variables.gradle || true
+            [ -f android/variables.gradle ] && sed -i 's/targetSdkVersion = 33/targetSdkVersion = 34/g' android/variables.gradle || true
+            
+            # MultiDex Enable (Dexing error fix)
+            sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle || true
+            sed -i '/dependencies {/a \    implementation "androidx.multidex:multidex:2.0.1"' android/app/build.gradle || true
+          fi
 
       - name: Build APK
         run: |
