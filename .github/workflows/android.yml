@@ -17,6 +17,7 @@ jobs:
         run: |
           npm install
           npm install onesignal-cordova-plugin
+          npm install @capacitor/android@latest @capacitor/cli@latest @capacitor/core@latest
 
       - name: Build Web
         run: |
@@ -28,14 +29,16 @@ jobs:
           npx cap add android || true
           npx cap sync android
 
-      - name: Upgrade Android SDK to 34
+      - name: Fix MultiDex and SDK 34
         run: |
-          # Ye command automatic build.gradle mein version upgrade kar degi
-          sed -i 's/compileSdkVersion = 33/compileSdkVersion = 34/g' android/variables.gradle || true
-          sed -i 's/targetSdkVersion = 33/targetSdkVersion = 34/g' android/variables.gradle || true
-          # Backup check agar variables.gradle mein na mile
-          sed -i 's/compileSdk 33/compileSdk 34/g' android/app/build.gradle || true
-          sed -i 's/targetSdk 33/targetSdk 34/g' android/app/build.gradle || true
+          # SDK Version update
+          [ -f android/variables.gradle ] && sed -i 's/33/34/g' android/variables.gradle || true
+          
+          # MultiDex enable karna (Asli Fix yahi hai)
+          sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle || true
+          
+          # Implementation add karna build.gradle mein
+          sed -i '/dependencies {/a \    implementation "androidx.multidex:multidex:2.0.1"' android/app/build.gradle || true
 
       - name: Build APK
         run: |
