@@ -16,26 +16,27 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          npm install @capacitor/android @capacitor/core @capacitor/cli
+          npm install onesignal-cordova-plugin
 
-      - name: Prepare Web Directory
+      - name: Build Web
         run: |
           mkdir -p www
           cp index.html www/
 
-      - name: Configure Capacitor
+      - name: Sync Capacitor
         run: |
-          npx cap add android
-          npx cap copy
+          npx cap add android || true
+          npx cap sync android
 
-      - name: Build Debug APK
+      - name: Build APK
         run: |
           cd android
+          chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: IndiaJobHub-App
+          name: IndiaJobHub-Final
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
