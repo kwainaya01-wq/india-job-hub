@@ -42,6 +42,7 @@ jobs:
             sed -i 's/targetSdkVersion = 33/targetSdkVersion = 34/g' android/variables.gradle || true
             sed -i '/defaultConfig {/a \        multiDexEnabled true' android/app/build.gradle || true
             sed -i '/dependencies {/a \    implementation "androidx.multidex:multidex:2.0.1"' android/app/build.gradle || true
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' android/app/src/main/AndroidManifest.xml || true
           fi
 
       - name: Build APK
@@ -54,6 +55,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: IndiaJobHub-V3-New
+          name: IndiaJobHub-V4-Final-Permission
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
