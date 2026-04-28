@@ -12,7 +12,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '21' # Sirf yahan 17 ki jagah 21 kar diya hai
+          java-version: '21'
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -48,13 +48,12 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-                    ./gradlew clean
+          ./gradlew clean
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-                    name: IndiaJobHub-V3-New
-                  
+          name: IndiaJobHub-V3-New
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
