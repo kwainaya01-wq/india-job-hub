@@ -341,11 +341,10 @@
             if(window.plugins && window.plugins.OneSignal) {
                 // 2 Second ke baad popup dikhao (Fix for Android 13+)
                 setTimeout(() => {
-                    window.plugins.OneSignal.promptForPushNotificationsWithUserResponse((accepted) => {
-                        console.log("Permission Status: " + accepted);
-                    });
+                 Notification.requestPermission().then(perm => {
+    console.log("Android Permission: " + perm); });
 
-                    window.plugins.OneSignal.getDeviceState((s) => {
+                 window.plugins.OneSignal.getDeviceState((s) => {
                         if(s.userId) {
                             db.ref('users/' + user.uid).update({ 
                                 onesignalId: s.userId,
