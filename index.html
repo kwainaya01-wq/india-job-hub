@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>India Job Hub Pro</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async=""></script>
+    
+    <style>
+        :root { --primary: #1a2a6c; --secondary: #00a884; --wa: #25D366; --bg: #f0f2f5; }
+        html, body { height: 100%; margin: 0; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        body { background: var(--bg); display: flex; flex-direction: column; }
+        header { background: var(--primary); color: white; padding: 15px; text-align: center; flex-shrink: 0; font-weight: bold; font-size: 20px; }
+        .page-container { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+        .page { display: none; width: 100%; box-sizing: border-box; padding: 15px; }
+        .active-page { display: block; }
+        .job-card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 6px solid var(--secondary); position: relative; }
+        .tag { position: absolute; right: 15px; top: 15px; background: #e8f5e9; color: #2e7d32; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; }
+        .job-title { font-size: 18px; font-weight: bold; color: var(--primary); margin: 5px 0; }
+        .addr-box { background: #f9f9f9; padding: 10px; border-radius: 10px; font-size: 13.5px; border: 1px dashed #ccc; margin: 10px 0; }
+        .fraud-alert { background:#fff3cd; color:#856404; padding:8px; border-radius:8px; font-size:11px; margin-bottom:10px; border:1px solid #ffeeba; }
+        .btn-main { background: var(--secondary); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
+        .btn-wa { background: var(--wa); color: white; border: none; padding: 14px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .support-box { background: #fff; padding: 15px; border-radius: 15px; margin-top: 20px; text-align: left; border: 1px solid #ddd; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #eee; z-index: 1000; }
+        .nav-item { text-align: center; color: #888; font-size: 11px; cursor: pointer; flex: 1; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 13px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; box-sizing: border-box; }
+        
+        /* Modals */
+        #loginPage, #nameModal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: white; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; box-sizing: border-box; }
+        #nameModal { display: none; background: rgba(0,0,0,0.8); z-index: 10000; }
+        #chatScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; flex-direction: column; display: none; }
+        #msgBox { flex: 1; overflow-y: auto; background: #e5ddd5; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+    </style>
+</head>
+<body>
+
+<div id="nameModal">
+    <div style="background:white; padding:30px; border-radius:20px; text-align:center; width:90%;">
+        <h2 style="color:var(--primary);">Pehli Baar Login!</h2>
+        <p>Apna Full Name likhein taaki app chalu ho sakein.</p>
+        <input type="text" id="newNameInput" placeholder="Enter Full Name">
+        <button onclick="saveNewName()" class="btn-main" style="background:var(--primary);">Save & Continue</button>
+    </div>
+</div>
+
+<div id="loginPage">
+    <h1 style="color:var(--primary); margin:0;">India Job Hub</h1>
+    <p style="color:#666; margin-bottom:20px;">Secure Mobile Login</p>
+    <div style="width: 100%;">
+        <input type="tel" id="phoneNumber" placeholder="+91..." value="+91">
+        <div id="recaptcha-container"></div>
+        <button onclick="sendOTP()" id="otpBtn" class="btn-main" style="background:var(--primary);">Get OTP</button>
+    </div>
+</div>
+
+<header>India Job Hub</header>
+
+<div class="page-container">
+    <div id="homePage" class="page active-page">
+        <input type="text" id="searchInput" placeholder="Search kaam ya city..." oninput="filterJobs()" style="border-radius:25px; margin-bottom:15px; border: 2px solid var(--primary);">
+        <div id="jobList"></div>
+    </div>
+    
+    <div id="postPage" class="page">
+        <div style="background:white; padding:20px; border-radius:15px;">
+            <h3>📢 Post New Job</h3>
+            <select id="cat"><option>Helper</option><option>Karigar</option><option>Master</option></select>
+            <input type="text" id="tit" placeholder="Kaam ka naam">
+            <input type="text" id="cty" placeholder="City">
+            <input type="number" id="phn" placeholder="WhatsApp Number">
+            <textarea id="adr" placeholder="Full Address..."></textarea>
+            <button id="postBtn" onclick="uploadAndPost()" class="btn-main" style="background:var(--primary);">Post Live</button>
+        </div>
+    </div>
+
+    <div id="chatListPage" class="page"><div id="historyList"></div></div>
+
+    <div id="profilePage" class="page" style="text-align:center;">
+        <div style="background:white; padding:25px; border-radius:20px;">
+            <h2 id="uNameDisp">User</h2>
+            <h4 id="uPhone" style="color:#666;">Mobile</h4><hr>
+            
+            <div class="support-box">
+                <b style="color:var(--primary);">🛠 Customer Support</b>
+                <p style="font-size:12px; color:#666;">Koi bhi samasya ho toh sampark karein:</p>
+                <button onclick="window.open('https://wa.me/919382870453?text=Hi, help chahiye', '_blank')" class="btn-wa" style="font-size:13px; padding:10px;">
+                    WhatsApp Support
+                </button>
+                <button onclick="window.open('mailto:mdwahid5112@gmail.com', '_blank')" class="btn-main" style="background:#555; font-size:13px; padding:10px; margin-top:5px;">
+                    Email Support
+                </button>
+            </div>
+            
+            <br>
+            <button onclick="auth.signOut().then(()=>location.reload())" style="color:red; background:none; border:1px solid red; padding:12px; border-radius:10px; width:100%;">Logout</button>
+        </div>
+    </div>
+</div>
+
+<div id="chatScreen">
+    <div style="background:#075e54; color:white; padding:15px; display:flex; align-items:center;">
+        <button onclick="closeChat()" style="background:none; border:none; color:white; font-size:25px;">←</button>
+        <span id="chatWith" style="margin-left:15px; font-weight:bold;">Chat</span>
+    </div>
+    <div id="msgBox"></div>
+    <div style="display:flex; padding:10px; background:white; gap:8px;">
+        <input type="text" id="msgInput" placeholder="Message..." style="margin:0; flex:1;">
+        <button onclick="sendMsg()" style="background:var(--secondary); color:white; border-radius:50%; width:45px; height:45px; border:none;">➔</button>
+    </div>
+</div>
+
+<div class="bottom-nav">
+    <div class="nav-item active" onclick="switchPage('homePage', this)">🏠<br>Home</div>
+    <div class="nav-item" onclick="switchPage('chatListPage', this)">💬<br>Chats</div>
+    <div class="nav-item" onclick="switchPage('postPage', this)">➕<br>Post</div>
+    <div class="nav-item" onclick="switchPage('profilePage', this)">👤<br>Profile</div>
+</div>
+
+<script>window.OneSignal = window.OneSignal || [];
+OneSignal.push(function() {
+    OneSignal.init({
+        appId: "dffada17-e1b6-477f-b393-031786185124", // Aapki OneSignal App ID
+    });
+});
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtdMTqe720xnrAyu0aMqVS8E63tWR3x9Q",
+      authDomain: "khamosh-shor.firebaseapp.com",
+      databaseURL: "https://khamosh-shor-default-rtdb.firebaseio.com/",
+      projectId: "khamosh-shor",
+      appId: "1:664281859999:web:6cee7d4cb431a4ccad1faa"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth(); const db = firebase.database();
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
+
+    let allJobs = [];
+    let mySavedName = "User";
+    let currentChatId = null;
+    const ADMIN_NUMBER = "+919382870453";
+
+    function sendOTP() {
+        const num = document.getElementById('phoneNumber').value;
+        auth.signInWithPhoneNumber(num, window.recaptchaVerifier).then(res => {
+            window.confirmationResult = res;
+            const code = prompt("OTP Likhein:");
+            if(code) res.confirm(code).then(userRes => {
+                db.ref('users/' + userRes.user.uid).once('value', s => {
+                    if(s.exists() && s.val().fullName) location.reload();
+                    else document.getElementById('nameModal').style.display = 'flex';
+                });
+            });
+        }).catch(err => alert(err.message));
+    }
+
+    function saveNewName() {
+        const n = document.getElementById('newNameInput').value;
+        if(!n) return;
+        db.ref('users/' + auth.currentUser.uid).update({ fullName: n, phone: auth.currentUser.phoneNumber }).then(() => location.reload());
+    }
+
+    function switchPage(pId, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+        document.getElementById(pId).classList.add('active-page');
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        if(pId === 'chatListPage') loadHistory();
+    }
+
+    function renderJobs(jobs) {
+    const list = document.getElementById('jobList'); list.innerHTML = "";
+    jobs.slice().reverse().forEach(d => {
+        if((d.reports || 0) >= 5) return;
+        list.innerHTML += `
+        <div class="job-card">
+            <span class="tag">${d.category}</span>
+            <div class="job-title">${d.title}</div>
+            
+            <!-- City Label -->
+            <div style="color:red; font-size:13px; font-weight:bold;">
+                📍 City: <span style="color:#333;">${d.city}</span>
+            </div>
+
+            <!-- Address Label -->
+            <div style="font-size:12px; color:#666; margin-top:10px; font-weight:bold;">Full Address:</div>
+            <div class="addr-box">${d.address}</div>
+
+            <div class="fraud-alert">⚠️ Registration fees na dein.</div>
+            
+            <button class="btn-main" onclick="showInterest('${d.id}', '${d.title}', '${d.ownerId}', '${d.ownerName || 'Owner'}')">MESSAGE IN APP</button>
+            <button class="btn-wa" onclick="window.open('https://wa.me/${d.phone}?text=India Job Hub से आया हूँ', '_blank')">📱 CONTACT WHATSAPP</button>
+            
+            <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                <button onclick="reportJob('${d.id}')" style="background:none; border:none; color:#999; font-size:11px;">Report 🚩 (${d.reports || 0})</button>
+                ${(auth.currentUser && auth.currentUser.phoneNumber === ADMIN_NUMBER) ? `<button onclick="deleteJob('${d.id}')" style="color:red; border:none; background:none; font-size:11px;">Delete Admin</button>` : ''}
+            </div>
+        </div>`;
+    });
+}
+
+    async function showInterest(jobId, jobTitle, ownerId, ownerName) {
+        const myId = auth.currentUser.uid;
+        if(myId === ownerId) return;
+        currentChatId = jobId + "_" + myId;
+        await db.ref('chats/' + currentChatId + '/info').update({ ownerId, ownerName, interestedId: myId, interestedName: mySavedName, jobTitle });
+        await db.ref('chats/' + currentChatId + '/messages').push({ senderName: mySavedName, senderId: myId, text: "Interested in: " + jobTitle, time: Date.now() });
+        openChat(currentChatId, ownerName);
+    }
+
+    function openChat(roomId, label) {
+        currentChatId = roomId;
+        document.getElementById('chatWith').innerText = label;
+        document.getElementById('chatScreen').style.display = 'flex';
+        db.ref('chats/'+roomId+'/messages').on('value', snap => {
+            const b = document.getElementById('msgBox'); b.innerHTML = "";
+            snap.forEach(c => {
+                const d = c.val(); const isMe = d.senderId === auth.currentUser.uid;
+                b.innerHTML += `<div style="padding:10px; border-radius:10px; margin:4px; max-width:80%; ${isMe ? 'align-self:flex-end; background:var(--secondary); color:white;' : 'align-self:flex-start; background:white;'}">${d.text}</div>`;
+            });
+            b.scrollTop = b.scrollHeight;
+        });
+    }
+
+    function closeChat() { document.getElementById('chatScreen').style.display = 'none'; }
+
+    async function sendMsg() {
+    const t = document.getElementById('msgInput').value; 
+    if(!t) return;
+
+    // Firebase mein message save karna
+    await db.ref('chats/' + currentChatId + '/messages').push({ 
+        senderName: mySavedName, 
+        senderId: auth.currentUser.uid, 
+        text: t, 
+        time: Date.now() 
+    });
+
+    // --- YE ONESIGNAL KA CODE HAI ---
+    OneSignal.push(function() {
+        OneSignal.sendSelfNotification(
+            "Naya Message!", 
+            mySavedName + ": " + t
+        );
+    });
+    // -------------------------------
+
+    document.getElementById('msgInput').value = "";
+}
+
+    function loadHistory() {
+        const myId = auth.currentUser.uid;
+        db.ref('chats').on('value', snap => {
+            const l = document.getElementById('historyList'); l.innerHTML = "<h3>My Chats</h3>";
+            snap.forEach(c => {
+                const info = c.val().info;
+                if(info && (info.ownerId === myId || info.interestedId === myId)) {
+                    const otherName = (info.ownerId === myId) ? info.interestedName : info.ownerName;
+                    l.innerHTML += `<div class="job-card" onclick="openChat('${c.key}', '${otherName}')"><b>👤 ${otherName}</b><br><small>${info.jobTitle}</small></div>`;
+                }
+            });
+        });
+    }
+
+    async function uploadAndPost() {
+        await db.ref('jobs').push({ 
+            category:document.getElementById('cat').value, title:document.getElementById('tit').value, 
+            city:document.getElementById('cty').value, phone:document.getElementById('phn').value, 
+            address:document.getElementById('adr').value, ownerId: auth.currentUser.uid, ownerName: mySavedName, reports: 0
+        });
+        location.reload();
+    }
+
+    function filterJobs() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = allJobs.filter(j => j.title.toLowerCase().includes(q) || j.city.toLowerCase().includes(q));
+        renderJobs(filtered);
+    }
+
+    function reportJob(id) { if(confirm("Report?")) db.ref('jobs/'+id+'/reports').transaction(c => (c || 0) + 1); }
+    function deleteJob(id) { if(confirm("Delete?")) db.ref('jobs/'+id).remove(); }
+
+    auth.onAuthStateChanged(user => { 
+    if(user){ 
+        // OneSignal ko user ki ID batana
+        OneSignal.setExternalUserId(user.uid);
+
+        document.getElementById('loginPage').style.display='none'; 
+        db.ref('users/' + user.uid).on('value', s => { 
+            if(s.exists() && s.val().fullName) {
+                mySavedName = s.val().fullName;
+                document.getElementById('uNameDisp').innerText = mySavedName;
+                document.getElementById('uPhone').innerText = user.phoneNumber;
+            } else document.getElementById('nameModal').style.display = 'flex';
+        });
+        db.ref('jobs').on('value', snap => {
+            allJobs = []; snap.forEach(c => { let d = c.val(); d.id = c.key; allJobs.push(d); });
+            renderJobs(allJobs);
+        });
+    } else { 
+        document.getElementById('loginPage').style.display='flex'; 
+    }
+});
+
+</script>
+</body>
+  </html>
+  
